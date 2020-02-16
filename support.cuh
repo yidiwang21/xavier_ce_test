@@ -14,4 +14,6 @@ float elapsedTime(Timer timer);
 
 void get_data_from_sensor(int src_file, std::string dest_file, int freq_div);
 
+const char *_cublasGetStatusString(cublasStatus_t status);
+
 #endif

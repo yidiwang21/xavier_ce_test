@@ -2,6 +2,7 @@
 #define __SUPPORT_CU__
 
 #include "support.cuh"
+#include "sm_alloc.cuh"
 
 int gflag = 0;
 
@@ -61,5 +62,12 @@ const char *_cublasGetStatusString(cublasStatus_t status) {
 #endif
 
 // SM filling-retreating tools
+__global__ void resident_kernel(int *mapping) {
+    KERNEL_PROLOGUE();
+
+    KERNEL_PERMANENT_RESIDENTS();
+
+    KERNEL_EPILOGUE();
+}
 
 #endif
