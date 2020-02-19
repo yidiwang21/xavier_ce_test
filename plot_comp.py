@@ -9,6 +9,8 @@ point_split = 20
 ## SM = 8
 file1 = 'log_gpu_reg_SM_8.txt'
 file2 = 'log_gpu_tensor_SM_8.txt'
+file3 = 'log_gpu_reg_SM_4.txt'
+file4 = 'log_gpu_tensor_SM_4.txt'
 
 file1_time_list = []
 file2_time_list = []
@@ -34,6 +36,7 @@ for index, line in enumerate(data2):
         a = data2[index+2].replace(':', '')
         file2_time_list.append(float(data2[index+3]))
 
+# figure 1 shows the reg core and tensor core comparison
 fig, axs = plt.subplots(2)
 fig.suptitle('GPU regular cores vs. tensor cores')
 axs[0].plot(size_list, file2_time_list, label='Tensor cores')
@@ -50,6 +53,7 @@ axs[1].set_xlabel('Size N')
 axs[1].set_ylabel('Time(ms)')
 axs[1].legend()
 
-
+# figure 2 
+# compare the average? max? computation time
 
 plt.show()
