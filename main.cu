@@ -3,6 +3,8 @@
 #include "sm_alloc.cuh"
 #include "ce_func.cuh"
 
+#define LOOP_NUM    2048
+
 // #define _GNU_SOURCE
 
 // gpu regular core implementation
@@ -94,11 +96,26 @@ int main(int argc, char *argv[]) {
     for (int i = 2; i < n_cpu_cores; i++)
         CPU_SET(i, &gemm_cpu_mask);
 
+    // if (CE == GPU_REG_CORES || CE == GPU_TENSOR_CORES) {
+    //     if (sm == 4) {
+    //         SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+    //         #ifdef SM_OCCUPATION
+    //         SM_KERNEL_LAUNCH();
+    //         #endif
+    //     }else if (sm == 8) {
+    //         // SM_MAPPING_INIT(0, \
+    //             1, 1, 1, 1, \
+    //             1, 1, 1, 1);
+    //         #undef SM_OCCUPATION
+    //     }
+    // }
+
     Timer timer;
     startTime(&timer);  // us
     float time_stamp_1, time_stamp_2;
+    float total_time;
 
-    for (int n = 1; n <= 2048; n++) {
+    for (int n = 1; n <= LOOP_NUM; n++) {
         printf("Looping number # %d\n", n);
 
         int M = 1024;
@@ -118,12 +135,11 @@ int main(int argc, char *argv[]) {
 
         if (CE == CPU_CORES) {
             struct cpu_thread_args in_args = {A_h, B_h, C_h, M, K, N};
-            // TODO: pthread set cpu affinity
             printf("Starting computing on CPU...");
             time_stamp_1 = elapsedTime(timer) * 1000;   // convert to ms
 
             pthread_t mythread;
-            pthread_create(&mythread, NULL, OpenMP_Gemm, (void *)&in_args); 
+            pthread_create(&mythread, NULL, *OpenMP_Gemm, (void *)&in_args); 
             pthread_setaffinity_np(mythread, sizeof(cpu_set_t), &gemm_cpu_mask);
             pthread_join(mythread, NULL);
             
@@ -133,19 +149,28 @@ int main(int argc, char *argv[]) {
             // SM filling-retreating added here
             // sync stream instead of device after implementing this
             // if a smid is desired for GEMM, then it's undesired for this kernel
+            // pthread_t sm_thread;
+            // int ret1;
+            // if (sm == 4) {
+            //     pthread_create(&sm_thread, NULL, *use_sm_residents, NULL);
+            // }else if (sm == 8) {
+            //     #undef SM_OCCUPATION
+            // }
+            SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
             if (sm == 4) {
-                SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+                #ifdef SM_OCCUPATION
+                SM_KERNEL_LAUNCH();
+                #endif            
             }else if (sm == 8) {
-                // SM_MAPPING_INIT(0, \
-                    1, 1, 1, 1, \
-                    1, 1, 1, 1);
                 #undef SM_OCCUPATION
             }
+            
 
-            #ifdef SM_OCCUPATION
-                SM_KERNEL_LAUNCH();
-            #endif  /* SM_OCCUPATION */
-            sleep(1);
+            // #ifdef SM_OCCUPATION
+
+            //     SM_KERNEL_LAUNCH();
+            // #endif  /* SM_OCCUPATION */
+            usleep(100);
 
 
             // allocating device variables
@@ -154,14 +179,14 @@ int main(int argc, char *argv[]) {
             cudaMalloc((void **)&A_d, M * K * sizeof(float));
             cudaMalloc((void **)&B_d, K * N * sizeof(float));
             cudaMalloc((void **)&C_d, M * N * sizeof(float));
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
             stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
             // Copy from host to device
             printf("Copying data from host to device..."); fflush(stdout);
-            cudaMemcpy(A_d, A_h, M * K * sizeof(float), cudaMemcpyHostToDevice);
-            cudaMemcpy(B_d, B_h, K * N * sizeof(float), cudaMemcpyHostToDevice);
-            cudaDeviceSynchronize();
+            cudaMemcpyAsync(A_d, A_h, M * K * sizeof(float), cudaMemcpyHostToDevice, stream);
+            cudaMemcpyAsync(B_d, B_h, K * N * sizeof(float), cudaMemcpyHostToDevice, stream);
+            // cudaDeviceSynchronize();
             stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
             printf("Launching GEMM...");
@@ -179,8 +204,23 @@ int main(int argc, char *argv[]) {
 
             // Copy from device to host
             printf("Copying data from device to host..."); fflush(stdout);
-            cudaMemcpy(C_d, C_h, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpyAsync(C_d, C_h, M * N * sizeof(float), cudaMemcpyDeviceToHost);
             stopTime(&timer); printf("%f s\n", elapsedTime(timer));
+
+            //
+            // int status = pthread_kill(sm_thread, SIGUSR1); 
+            // if (status < 0) {
+            //     perror("pthread_kill failed\n");
+            // }
+            // status = pthread_join(sm_thread, NULL);
+            // if (status < 0) {
+            //     perror("pthread_join failed\n");
+            // }
+
+            SM_STOP_KERNEL_RESIDENTS();
+                                       
+            // pthread_cancel(sm_thread);
+
             // free gpu memory
             cudaFree(A_d);
             cudaFree(B_d);
@@ -199,5 +239,9 @@ int main(int argc, char *argv[]) {
     // do not destroy the handle if more than one mmul need to be done
     cublasDestroy(handle);    
 
+    // cudaDeviceReset();
+    stopTime(&timer); printf("Total time: %f s\n", elapsedTime(timer));
+    
+    cudaDeviceSynchronize();
     return 0;
 }

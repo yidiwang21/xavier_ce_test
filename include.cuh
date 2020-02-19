@@ -17,6 +17,7 @@
 #include <sys/sysinfo.h>
 #include <string>
 #include <mutex>
+#include <signal.h>
 
 
 enum computing_elem {CPU_CORES, GPU_REG_CORES, GPU_TENSOR_CORES};

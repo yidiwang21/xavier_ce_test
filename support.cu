@@ -62,12 +62,26 @@ const char *_cublasGetStatusString(cublasStatus_t status) {
 #endif
 
 // SM filling-retreating tools
-__global__ void resident_kernel(int *mapping) {
+__global__ void resident_kernel(int *mapping, int *stop_flag) {
     KERNEL_PROLOGUE();
 
     KERNEL_PERMANENT_RESIDENTS();
 
     KERNEL_EPILOGUE();
 }
+
+void *use_sm_residents(void *vargp) {
+    sigset_t set;
+    sigemptyset(&set);
+
+
+    SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+    #ifdef SM_OCCUPATION
+    SM_KERNEL_LAUNCH();
+    #endif
+
+    pthread_exit((void *)0);
+}
+
 
 #endif

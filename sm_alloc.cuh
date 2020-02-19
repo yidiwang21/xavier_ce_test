@@ -1,6 +1,8 @@
 #ifndef __SM_ALLOC__
 #define __SM_ALLOC__
 
+#include "include.cuh"
+
 #define SM_OCCUPATION
 
 #define MAX_SM  8
@@ -10,7 +12,7 @@
 
 #define NUMARGS(...)  (sizeof((int[]){__VA_ARGS__})/sizeof(int))
 
-extern __global__ void resident_kernel(int *mapping);
+extern __global__ void resident_kernel(int *mapping, int *stop_flag);
 
 #define _get_smid() ({  \
     uint ret;   \
@@ -25,6 +27,7 @@ extern __global__ void resident_kernel(int *mapping);
 
 
 #define SM_MAPPING_INIT(...)    \
+    printf("    * Initialize SM mapping...\n");   \
     int *mapping_d; \
     int mapping_h[MAX_SM+1] = {MAX_SM, __VA_ARGS__};    /*  1: enabled, 0: disabled */ \
     if (NUMARGS(__VA_ARGS__) != MAX_SM) {   \
@@ -36,21 +39,33 @@ extern __global__ void resident_kernel(int *mapping);
         if (mapping_h[i] > 0) active_sm++;  \
     mapping_h[0] = active_sm;   \
     int mapping_size = (MAX_SM + 1) * sizeof(int);  \
-    cudaMalloc((void**)&mapping_d, mapping_size);
+    cudaMalloc((void**)&mapping_d, mapping_size);   \
+    int *stop_flag_h = new int;   \
+    *stop_flag_h = false;    \
+    int *stop_flag_d;  \
+    cudaMalloc((void**)&stop_flag_d, sizeof(int));
 
 #define SM_CREATE_STREAM()  \
+    printf("    * Creating stream for resident kernels...\n"); \
     cudaStream_t occupied_stream;   \
     cudaStreamCreateWithFlags(&occupied_stream, cudaStreamNonBlocking);
 
 #define SM_COPY_MAPPING()   \
-    cudaMemcpy(mapping_d, mapping_h, mapping_size, cudaMemcpyHostToDevice);
+    printf("    * Copying SM mapping to device...\n"); \
+    cudaMemcpy(mapping_d, mapping_h, mapping_size, cudaMemcpyHostToDevice); \
+    cudaMemcpy(stop_flag_d, stop_flag_h, sizeof(int), cudaMemcpyHostToDevice);
 
+#define SM_STOP_KERNEL_RESIDENTS() \
+    printf("    * Stopping kernel residents...\n"); \
+    *stop_flag_h = true; \
+    cudaMemcpy(stop_flag_d, stop_flag_h, sizeof(int), cudaMemcpyHostToDevice);
 
 
 #define SM_KERNEL_LAUNCH() \
     SM_CREATE_STREAM(); \
     SM_COPY_MAPPING(); \
-    resident_kernel <<< SM_OCCUPIED_GRIDSIZE, SM_OCCUPIED_BLOCKSIZE, 0, occupied_stream >>> (mapping_d);
+    printf("    * Launching resident_kernel...\n"); \
+    resident_kernel <<< SM_OCCUPIED_GRIDSIZE, SM_OCCUPIED_BLOCKSIZE, 0, occupied_stream >>> (mapping_d, stop_flag_d); \
 
 /* FIXME: check any other code needed here */
 #define KERNEL_PROLOGUE() \
@@ -60,12 +75,9 @@ extern __global__ void resident_kernel(int *mapping);
 /* permanent residents in GPU, spin "forever" */
 #define KERNEL_PERMANENT_RESIDENTS()  \
     uint64_t curr_time; \
-    while (1) curr_time = _get_global_time();
+    while (stop_flag == false) curr_time = _get_global_time();
 
 #define KERNEL_EPILOGUE()
-
-
-
 
 
 #endif /* __SM_ALLOC__ */

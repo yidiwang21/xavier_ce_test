@@ -19,5 +19,6 @@ for index, line in enumerate(data):
         size_list.append(int(a))
         elapsed_time_list.append(float(data[index+3]))
 
+plt.figure();
 plt.plot(size_list, elapsed_time_list)
 plt.show()
