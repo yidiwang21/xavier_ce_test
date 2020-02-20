@@ -79,6 +79,7 @@ axs[0,0].plot(size_list, file1_time_list, label='Regular cores')
 axs[0,0].set_xlabel('Size N')
 axs[0,0].set_ylabel('Time(ms)')
 axs[0,0].set_xscale('log', basex=2)
+axs[0,0].set_title('SM = 8, N ranging from 1 to 2^11')
 axs[0,0].legend()
 
 axs[0,1].plot(size_list[:point_split], file2_time_list[:point_split], label='Tensor cores')
@@ -86,6 +87,7 @@ axs[0,1].plot(size_list[:point_split], file1_time_list[:point_split], label='Reg
 axs[0,1].set_xticks(np.arange(0, point_split+1, step=1))
 axs[0,1].set_xlabel('Size N')
 axs[0,1].set_ylabel('Time(ms)')
+axs[0,1].set_title('SM = 8, N ranging from 1 to 2^5')
 axs[0,1].legend()
 
 axs[1,0].plot(size_list, file3_time_list, label='Regular cores SM = 4')
@@ -106,13 +108,17 @@ axs[1,1].legend()
 # compare the average? max? computation time
 # average computation time of the different matrix sizes
 
+bary = [file0_time_list[int(len(size_list)/2)-1], file1_time_list[int(len(size_list)/2)-1], file3_time_list[int(len(size_list)/2)-1], file2_time_list[int(len(size_list)/2)-1], file4_time_list[int(len(size_list)/2)-1]]
+
 plt.figure()
-plt.title('Computation time @ N = 2^11')
-# plt.bar(1, file0_time_list[len(size_list)-1])
-plt.bar(1, file1_time_list[len(size_list)-1])
-plt.bar(2, file2_time_list[len(size_list)-1])
-plt.bar(3, file3_time_list[len(size_list)-1])
-plt.bar(4, file4_time_list[len(size_list)-1])
+plt.title('Average computation time @ M = N = K = 1024')
+# plt.bar(0, file0_time_list[int(len(size_list)/2)-1])
+plt.bar(1, file1_time_list[int(len(size_list)/2)-1])
+plt.bar(2, file3_time_list[int(len(size_list)/2)-1])
+plt.bar(3, file2_time_list[int(len(size_list)/2)-1])
+plt.bar(4, file4_time_list[int(len(size_list)/2)-1])
+for i in range(1,5):
+    plt.text(x = i-0.3, y = bary[i] + 0.1, s = bary[i])
 plt.xticks(np.arange(5), ('', 'gpu reg sm=8', 'gpu reg sm=4', 'gpu tensor sm=8', 'gpu tensor sm=4'))
 
 
