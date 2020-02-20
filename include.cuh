@@ -20,6 +20,6 @@
 #include <signal.h>
 
 
-enum computing_elem {CPU_CORES, GPU_REG_CORES, GPU_TENSOR_CORES};
+enum computing_elem {CPU_CORES, GPU_REG_CORES, GPU_TENSOR_CORES, TEST_OUTPUT};
 
 #endif

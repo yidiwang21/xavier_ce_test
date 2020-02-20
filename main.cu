@@ -4,6 +4,7 @@
 #include "ce_func.cuh"
 
 #define LOOP_NUM    2048
+#define LOOP_START  2046
 
 // #define _GNU_SOURCE
 
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
     std::string outfile;
     int opt;
     enum computing_elem CE = GPU_REG_CORES;   // default computing element is GPU regular cores
-    int sm = MAX_SM;
+    int sm = 4;
     int n_cpu_cores = 0;
     while ((opt = getopt (argc, argv, "e:s:c: ")) != EOF) {
         switch (opt) {
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
                 if (atoi(optarg) == 0) CE = CPU_CORES; 
                 else if (atoi(optarg) == 1) CE = GPU_REG_CORES;
                 else if (atoi(optarg) == 2) CE = GPU_TENSOR_CORES;
+                else if (atoi(optarg) == -1) CE = TEST_OUTPUT;
                 break;
             case 's':       // number of SM
                 sm = atoi(optarg);
@@ -72,6 +74,11 @@ int main(int argc, char *argv[]) {
             printf("Computing element: GPU tensor cores\n"); fflush(stdout);
             printf("Online SM: %d\n", sm);
             outfile = "log_gpu_tensor_SM_" + std::to_string(sm) + ".txt";
+            break;
+        case TEST_OUTPUT:
+            printf("Test output\n"); fflush(stdout);
+            outfile = "log_test.txt";
+            CE = GPU_REG_CORES;
             break;
     }
     const char *cstr = outfile.c_str();
@@ -115,7 +122,7 @@ int main(int argc, char *argv[]) {
     float time_stamp_1, time_stamp_2;
     float total_time;
 
-    for (int n = 1; n <= LOOP_NUM; n++) {
+    for (int n = LOOP_START; n <= LOOP_NUM; n++) {
         printf("Looping number # %d\n", n);
 
         int M = 1024;
@@ -157,6 +164,8 @@ int main(int argc, char *argv[]) {
             //     #undef SM_OCCUPATION
             // }
             SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+            // Tested on Geforce 1070
+            // SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
             if (sm == 4) {
                 #ifdef SM_OCCUPATION
                 SM_KERNEL_LAUNCH();
@@ -204,7 +213,7 @@ int main(int argc, char *argv[]) {
 
             // Copy from device to host
             printf("Copying data from device to host..."); fflush(stdout);
-            cudaMemcpyAsync(C_d, C_h, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpyAsync(C_d, C_h, M * N * sizeof(float), cudaMemcpyDeviceToHost, stream);
             stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
             //
@@ -218,10 +227,16 @@ int main(int argc, char *argv[]) {
             // }
 
             SM_STOP_KERNEL_RESIDENTS();
+            // printf("Killing any active cuda kernels...\n");
+            // cudaSetDevice(0);
+            
                                        
             // pthread_cancel(sm_thread);
 
             // free gpu memory
+            printf("Freeing gpu and cpu memory...");
+            stopTime(&timer); printf("%f s\n", elapsedTime(timer));
+            // cudaDeviceReset();
             cudaFree(A_d);
             cudaFree(B_d);
             cudaFree(C_d);
