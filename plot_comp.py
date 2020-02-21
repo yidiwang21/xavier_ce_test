@@ -113,13 +113,14 @@ bary = [file0_time_list[int(len(size_list)/2)-1], file1_time_list[int(len(size_l
 plt.figure()
 plt.title('Average computation time @ M = N = K = 1024')
 # plt.bar(0, file0_time_list[int(len(size_list)/2)-1])
-plt.bar(1, file1_time_list[int(len(size_list)/2)-1])
-plt.bar(2, file3_time_list[int(len(size_list)/2)-1])
-plt.bar(3, file2_time_list[int(len(size_list)/2)-1])
-plt.bar(4, file4_time_list[int(len(size_list)/2)-1])
+plt.bar(1, file1_time_list[int(len(size_list)/2)-1], 0.5)
+plt.bar(2, file3_time_list[int(len(size_list)/2)-1], 0.5)
+plt.bar(3, file2_time_list[int(len(size_list)/2)-1], 0.5)
+plt.bar(4, file4_time_list[int(len(size_list)/2)-1], 0.5)
 for i in range(1,5):
-    plt.text(x = i-0.3, y = bary[i] + 0.1, s = bary[i])
+    plt.text(x = i-0.2, y = bary[i] + 0.1, s = bary[i])
 plt.xticks(np.arange(5), ('', 'gpu reg sm=8', 'gpu reg sm=4', 'gpu tensor sm=8', 'gpu tensor sm=4'))
+plt.ylabel('Time(ms)')
 
 
 plt.show()
