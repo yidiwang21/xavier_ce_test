@@ -74,7 +74,7 @@ void *use_sm_residents(void *vargp) {
     sigset_t set;
     sigemptyset(&set);
 
-
+    SM_VARS_INIT();
     SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
     #ifdef SM_OCCUPATION
     SM_KERNEL_LAUNCH();

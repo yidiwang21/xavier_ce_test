@@ -15,12 +15,14 @@ file1 = 'log_gpu_reg_SM_8.txt'
 file2 = 'log_gpu_tensor_SM_8.txt'
 file3 = 'log_gpu_reg_SM_4.txt'
 file4 = 'log_gpu_tensor_SM_4.txt'
+file5 = 'log_gpu_tensor_SM_2.txt'
 
 file0_time_list = []
 file1_time_list = []
 file2_time_list = []
 file3_time_list = []
 file4_time_list = []
+file5_time_list = []
 
 size_list = []
 
@@ -71,6 +73,15 @@ for index, line in enumerate(data4):
         a = data4[index+2].replace(':', '')
         file4_time_list.append(float(data4[index+3]))
 
+with open(file5) as f:
+    strline5 = f.read()
+data5 = strline5.split()
+
+for index, line in enumerate(data5):
+    if 'N' == line:
+        a = data5[index+2].replace(':', '')
+        file5_time_list.append(float(data5[index+3]))
+
 # figure 1 shows the reg core and tensor core comparison
 fig, axs = plt.subplots(2, 2)
 fig.suptitle('GPU regular cores vs. tensor cores')
@@ -99,6 +110,7 @@ axs[1,0].legend()
 
 axs[1,1].plot(size_list, file4_time_list, label='Tensor cores SM = 4')
 axs[1,1].plot(size_list, file2_time_list, label='Tensor cores SM = 8')
+axs[1,1].plot(size_list, file5_time_list, label='Tensor cores SM = 2')
 axs[1,1].set_xlabel('Size N')
 axs[1,1].set_ylabel('Time(ms)')
 axs[1,1].set_xscale('log', basex=2)

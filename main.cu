@@ -4,7 +4,7 @@
 #include "ce_func.cuh"
 
 #define LOOP_NUM    2048
-#define LOOP_START  2046
+#define LOOP_START  1
 
 // #define _GNU_SOURCE
 
@@ -163,18 +163,16 @@ int main(int argc, char *argv[]) {
             // }else if (sm == 8) {
             //     #undef SM_OCCUPATION
             // }
-            SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+            SM_VARS_INIT();
             // Tested on Geforce 1070
             // SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-            if (sm == 4) {
-                #ifdef SM_OCCUPATION
+            if (sm == 2) {
+                SM_MAPPING_INIT(0, 0, 1, 1, 1, 1, 1, 1);
                 SM_KERNEL_LAUNCH();
-                #endif            
-            }else if (sm == 8) {
-                #undef SM_OCCUPATION
+            }else if (sm == 4) {
+                SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+                SM_KERNEL_LAUNCH();
             }
-            
-
             // #ifdef SM_OCCUPATION
 
             //     SM_KERNEL_LAUNCH();

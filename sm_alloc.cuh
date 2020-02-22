@@ -24,7 +24,19 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
     asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(reading)); \
     reading;    })
 
-
+#define SM_VARS_INIT()   \
+    printf("    * initializing variables...\n");    \
+    int device = -1;    \
+    int *stop_flag_h = new int;   \
+    *stop_flag_h = 0;    \
+    int *stop_flag_d;  \
+    cudaMalloc((void**)&stop_flag_d, sizeof(int));  \
+    int *block_smids_h = new int[SM_OCCUPIED_GRIDSIZE]; \
+    memset(block_smids_h, -100, SM_OCCUPIED_GRIDSIZE * sizeof(int)); \
+    int *block_smids_d; \
+    cudaMalloc((void**)&block_smids_d, sizeof(int) * SM_OCCUPIED_GRIDSIZE); \
+    cudaStream_t occupied_stream;   \
+    cudaStream_t backup_stream;
 
 #define SM_MAPPING_INIT(...)    \
     printf("    * Initialize SM mapping...\n");   \
@@ -44,17 +56,6 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
     /* int *stop_flag; \
     cudaMallocManaged((void**)&stop_flag, sizeof(int)); \
     *stop_flag = 0; \ */\
-    int device = -1;    \
-    int *stop_flag_h = new int;   \
-    *stop_flag_h = 0;    \
-    int *stop_flag_d;  \
-    cudaMalloc((void**)&stop_flag_d, sizeof(int));  \
-    int *block_smids_h = new int[SM_OCCUPIED_GRIDSIZE]; \
-    memset(block_smids_h, -100, SM_OCCUPIED_GRIDSIZE * sizeof(int)); \
-    int *block_smids_d; \
-    cudaMalloc((void**)&block_smids_d, sizeof(int) * SM_OCCUPIED_GRIDSIZE); \
-    cudaStream_t occupied_stream;   \
-    cudaStream_t backup_stream; \
 
 #define SM_CREATE_STREAM()  \
     printf("    * Creating stream for resident kernels...\n"); \
