@@ -5,7 +5,6 @@
 
 #define SM_OCCUPATION
 
-#define MAX_SM  8
 #define SM_OCCUPIED_BLOCKSIZE 1    /* blocksize of the blocks that are used to occupy the certain  number of SMs */
 #define SM_BLOCKS_PER   32
 #define SM_OCCUPIED_GRIDSIZE MAX_SM * SM_BLOCKS_PER

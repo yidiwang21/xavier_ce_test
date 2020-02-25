@@ -1,7 +1,8 @@
-#include "include.cuh"
-#include "support.cuh"
-#include "sm_alloc.cuh"
-#include "ce_func.cuh"
+#include "lib/include.cuh"
+#include "lib/support.cuh"
+#include "lib/sm_alloc.cuh"
+#include "lib/ce_func.cuh"
+#include "cuda_profiler_api.h"
 
 #define LOOP_NUM    2048
 #define LOOP_START  1
@@ -256,5 +257,6 @@ int main(int argc, char *argv[]) {
     stopTime(&timer); printf("Total time: %f s\n", elapsedTime(timer));
     
     cudaDeviceSynchronize();
+    cudaProfilerStop();
     return 0;
 }

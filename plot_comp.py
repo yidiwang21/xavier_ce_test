@@ -10,12 +10,12 @@ def compute_avg(lst):
 point_split = 32
 
 ## SM = 8
-file0 = 'log_cpu_2.txt'
-file1 = 'log_gpu_reg_SM_8.txt'
-file2 = 'log_gpu_tensor_SM_8.txt'
-file3 = 'log_gpu_reg_SM_4.txt'
-file4 = 'log_gpu_tensor_SM_4.txt'
-file5 = 'log_gpu_tensor_SM_2.txt'
+file0 = 'log/log_cpu_2.txt'
+file1 = 'log/log_gpu_reg_SM_8.txt'
+file2 = 'log/log_gpu_tensor_SM_8.txt'
+file3 = 'log/log_gpu_reg_SM_4.txt'
+file4 = 'log/log_gpu_tensor_SM_4.txt'
+file5 = 'log/log_gpu_tensor_SM_2.txt'
 
 file0_time_list = []
 file1_time_list = []

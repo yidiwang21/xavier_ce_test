@@ -70,6 +70,22 @@ __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_smids) 
     KERNEL_EPILOGUE();
 }
 
+__global__ void dummy_kernel() {
+    uint64_t spin_duration = 1000 * 1000 * 1000;
+    uint64_t start_time = _get_global_time();
+    // if (threadIdx.x == 0) {
+    //     block_times[blockIdx.x * 2] = start_time;
+    // }
+    __syncthreads();
+    while ((_get_global_time() - start_time) < spin_duration) {
+        continue;
+    }
+    // if (threadIdx.x == 0) {
+    //     block_times[blockIdx.x * 2 + 1] = __get_global_time();
+    // }
+    return;
+}
+
 void *use_sm_residents(void *vargp) {
     sigset_t set;
     sigemptyset(&set);

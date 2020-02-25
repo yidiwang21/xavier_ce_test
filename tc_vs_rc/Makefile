@@ -6,12 +6,12 @@ EXE	        = main
 OBJ	        = main.o support.o
 ARCH		= -arch=sm_52
 CJSON		= -l cjson
-INCLUDE		= -I include/
+LIB			= lib/
 
 default: $(EXE)
 
-support.o: support.cu support.cuh
-	$(NVCC) -c -o $@ support.cu $(NVCC_FLAGS)
+support.o: $(LIB)support.cu $(LIB)support.cuh $(LIB)sm_alloc.cuh
+	$(NVCC) -c -o $@ $(LIB)support.cu $(NVCC_FLAGS)
 
 # cpu_cores.o: cpu_cores.cu
 # 	$(NVCC) -c -o $@ cpu_cores.cu $(NVCC_FLAGS)
@@ -22,8 +22,8 @@ support.o: support.cu support.cuh
 # gpu_tensor_cores.o: gpu_tensor_cores.cu
 # 	$(NVCC) -c -o $@ gpu_tensor_cores.cu $(NVCC_FLAGS)
 
-main.o: main.cu support.cuh sm_alloc.cuh
-	$(NVCC) -c -o $@ $(INCLUDE) main.cu $(NVCC_FLAGS)
+main.o: main.cu $(LIB)support.cuh $(LIB)sm_alloc.cuh
+	$(NVCC) -c -o $@ main.cu $(NVCC_FLAGS)
 
 $(EXE): $(OBJ)
 	$(NVCC) $(CJSON) $(ARCH) $(OBJ) -o $(EXE) $(LD_FLAGS)

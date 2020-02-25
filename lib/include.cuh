@@ -22,4 +22,9 @@
 
 enum computing_elem {CPU_CORES, GPU_REG_CORES, GPU_TENSOR_CORES, TEST_OUTPUT};
 
+enum exec_mode {CONCURRENT, INDIVIDUAL};
+
+
+#define MAX_SM  8
+
 #endif
