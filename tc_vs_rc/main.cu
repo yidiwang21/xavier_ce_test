@@ -1,7 +1,7 @@
-#include "lib/include.cuh"
-#include "lib/support.cuh"
-#include "lib/sm_alloc.cuh"
-#include "lib/ce_func.cuh"
+#include "include.cuh"
+#include "support.cuh"
+#include "sm_alloc.cuh"
+#include "ce_func.cuh"
 #include "cuda_profiler_api.h"
 
 #define LOOP_NUM    2048
@@ -17,6 +17,9 @@
 // extern void OpenMP_Gemm(const float *A, const float *B, float *C, const int M, const int K, const int N);
 
 // TODO: fix or not fix freq
+
+int gflag = 0;
+std::mutex mtx;
 
 int main(int argc, char *argv[]) {
     // reserve 2 cpus for this process
@@ -123,6 +126,12 @@ int main(int argc, char *argv[]) {
     float time_stamp_1, time_stamp_2;
     float total_time;
 
+    // assigning sensor source file
+    int fd = open("/sys/bus/i2c/drivers/ina3221x/1-0040/iio:device0/in_power0_input", O_RDONLY | O_NONBLOCK);
+    printf("Creating thread for power reading...");
+    std::thread power_thread(get_data_from_sensor, fd, outfile, 0);
+    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
+
     for (int n = LOOP_START; n <= LOOP_NUM; n++) {
         printf("Looping number # %d\n", n);
 
@@ -167,11 +176,63 @@ int main(int argc, char *argv[]) {
             SM_VARS_INIT();
             // Tested on Geforce 1070
             // SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-            if (sm == 2) {
+            // switch (sm) {
+            //     case 1:
+            //         SM_MAPPING_INIT(0, 1, 1, 1, 1, 1, 1, 1);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            //     case 2:
+            //         SM_MAPPING_INIT(0, 0, 1, 1, 1, 1, 1, 1);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            //     case 3:
+            //         SM_MAPPING_INIT(0, 0, 0, 1, 1, 1, 1, 1);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            //     case 4:
+            //         SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            //     case 5:
+            //         SM_MAPPING_INIT(0, 0, 0, 0, 0, 1, 1, 1);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            //     case 6:
+            //         SM_MAPPING_INIT(0, 0, 0, 0, 0, 0, 1, 1);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            //     case 7:
+            //         SM_MAPPING_INIT(0, 0, 0, 0, 0, 0, 0, 1);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            //     case 8:
+            //         SM_MAPPING_INIT(0, 0, 0, 0, 0, 0, 0, 0);
+            //         SM_KERNEL_LAUNCH();
+            //         break;
+            // }
+            if (sm == 1) {
+                SM_MAPPING_INIT(0, 1, 1, 1, 1, 1, 1, 1);
+                SM_KERNEL_LAUNCH();
+            } else if (sm == 2) {
                 SM_MAPPING_INIT(0, 0, 1, 1, 1, 1, 1, 1);
                 SM_KERNEL_LAUNCH();
-            }else if (sm == 4) {
+            } else if (sm == 3) {
+                SM_MAPPING_INIT(0, 0, 0, 1, 1, 1, 1, 1);
+                SM_KERNEL_LAUNCH();
+            } else if (sm == 4) {
                 SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+                SM_KERNEL_LAUNCH();
+            }else if (sm == 5) {
+                SM_MAPPING_INIT(0, 0, 0, 0, 0, 1, 1, 1);
+                SM_KERNEL_LAUNCH();
+            } else if (sm == 6) {
+                SM_MAPPING_INIT(0, 0, 0, 0, 0, 0, 1, 1);
+                SM_KERNEL_LAUNCH();
+            } else if (sm == 7) {
+                SM_MAPPING_INIT(0, 0, 0, 0, 0, 0, 0, 1);
+                SM_KERNEL_LAUNCH();
+            } else if (sm == 8) {
+                SM_MAPPING_INIT(0, 0, 0, 0, 0, 0, 0, 0);
                 SM_KERNEL_LAUNCH();
             }
             // #ifdef SM_OCCUPATION
@@ -258,5 +319,12 @@ int main(int argc, char *argv[]) {
     
     cudaDeviceSynchronize();
     cudaProfilerStop();
+
+    sleep(1);
+    mtx.lock();
+    gflag = 1;
+    mtx.unlock();
+    power_thread.join();
+
     return 0;
 }

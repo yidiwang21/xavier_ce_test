@@ -4,8 +4,6 @@
 #include "support.cuh"
 #include "sm_alloc.cuh"
 
-int gflag = 0;
-
 void startTime(Timer* timer) {
     gettimeofday(&(timer->startTime), NULL);
 }
@@ -17,23 +15,6 @@ void stopTime(Timer* timer) {
 float elapsedTime(Timer timer) {
     return ((float) ((timer.endTime.tv_sec - timer.startTime.tv_sec) \
                 + (timer.endTime.tv_usec - timer.startTime.tv_usec)/1.0e6));
-}
-
-void get_data_from_sensor(int src_file, std::string dest_file, int freq_div) {
-    if (src_file < 0) {
-        fprintf(stderr, "Error opening file.");
-        exit(1);
-    }
-
-    std::ofstream out;
-    out.open(dest_file, std::ios::app);
-    
-    while (gflag == 0) {
-        char buf[31];
-        lseek(src_file, 0, 0);
-        int n = read(src_file, buf, 32);
-        out << "GPU " << buf;
-    }
 }
 
 #ifdef CUBLAS_API_H_
@@ -86,17 +67,44 @@ __global__ void dummy_kernel() {
     return;
 }
 
-void *use_sm_residents(void *vargp) {
-    sigset_t set;
-    sigemptyset(&set);
+// void *use_sm_residents(void *vargp) {
+//     sigset_t set;
+//     sigemptyset(&set);
 
-    SM_VARS_INIT();
-    SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
-    #ifdef SM_OCCUPATION
-    SM_KERNEL_LAUNCH();
-    #endif
+//     SM_VARS_INIT();
+//     SM_MAPPING_INIT(0, 0, 0, 0, 1, 1, 1, 1);
+//     #ifdef SM_OCCUPATION
+//     SM_KERNEL_LAUNCH();
+//     #endif
 
-    pthread_exit((void *)0);
+//     pthread_exit((void *)0);
+// }
+extern int gflag;
+
+void get_data_from_sensor(int src_file, std::string dest_file, int freq_div) {
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(0, &mask);
+    CPU_SET(1, &mask);
+    if (sched_setaffinity(0, sizeof(mask), &mask) != 0) {
+        printf("sched_setaffinity for the power query thread failed.\n");
+        exit(1);
+    }
+
+    if (src_file < 0) {
+        fprintf(stderr, "Error opening file.");
+        exit(1);
+    }
+
+    std::ofstream out;
+    out.open(dest_file, std::ios::app);
+    
+    while (gflag == 0) {
+        char buf[31];
+        lseek(src_file, 0, 0);
+        int n = read(src_file, buf, 32);
+        out << "GPU " << buf;
+    }
 }
 
 

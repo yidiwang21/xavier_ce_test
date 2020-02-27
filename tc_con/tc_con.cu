@@ -20,8 +20,6 @@ struct gemm_thread_struct {
 
 extern __global__ void dummy_kernel();
 
-std::mutex mtx;
-
 // for dummy_kernel launch
 void thread_dummy(cudaStream_t s, Timer timer, int nb) {
     mtx.lock();

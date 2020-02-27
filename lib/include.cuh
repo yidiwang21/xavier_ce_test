@@ -13,17 +13,18 @@
 #include <iostream>
 #include <fstream>
 #include <sys/types.h>
+#include <sys/fcntl.h>
 #include <sys/time.h>
 #include <sys/sysinfo.h>
 #include <string>
 #include <mutex>
 #include <signal.h>
+#include <thread>
 
 
 enum computing_elem {CPU_CORES, GPU_REG_CORES, GPU_TENSOR_CORES, TEST_OUTPUT};
 
 enum exec_mode {CONCURRENT, INDIVIDUAL};
-
 
 #define MAX_SM  8
 
