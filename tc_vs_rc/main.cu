@@ -16,7 +16,7 @@
 // // cpu open mp implementation
 // extern void OpenMP_Gemm(const float *A, const float *B, float *C, const int M, const int K, const int N);
 
-// TODO: fix or not fix freq
+// TODO: fix power reading problem
 
 int gflag = 0;
 std::mutex mtx;
@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
     }
 
     // main program starts
-    std::string outfile;
+    std::string logfile;    // for log of time
+    // std::string outfile;    // for log of power
     int opt;
     enum computing_elem CE = GPU_REG_CORES;   // default computing element is GPU regular cores
     int sm = 4;
@@ -67,30 +68,31 @@ int main(int argc, char *argv[]) {
     switch (CE) {
         case CPU_CORES:
             printf("Computing element: CPU cores\n"); fflush(stdout);
-            outfile = "log_cpu_" + std::to_string(n_cpu_cores) + ".txt";
+            logfile = "log_cpu_" + std::to_string(n_cpu_cores) + ".txt";
             break;
         case GPU_REG_CORES:
             printf("Computing element: GPU regular cores\n"); fflush(stdout);
             printf("Online SM: %d\n", sm);
-            outfile = "log_gpu_reg_SM_" + std::to_string(sm) + ".txt";
+            logfile = "log_gpu_reg_SM_" + std::to_string(sm) + ".txt";
+            // outfile = "power_gpu_reg_SM_" + std::to_string(sm) + ".txt";
             break;
         case GPU_TENSOR_CORES:
             printf("Computing element: GPU tensor cores\n"); fflush(stdout);
             printf("Online SM: %d\n", sm);
-            outfile = "log_gpu_tensor_SM_" + std::to_string(sm) + ".txt";
+            logfile = "log_gpu_tensor_SM_" + std::to_string(sm) + ".txt";
+            // outfile = "power_gpu_tensor_SM_" + std::to_string(sm) + ".txt";
             break;
         case TEST_OUTPUT:
             printf("Test output\n"); fflush(stdout);
-            outfile = "log_test.txt";
+            logfile = "log_test.txt";
             CE = GPU_REG_CORES;
             break;
     }
-    const char *cstr = outfile.c_str();
+    const char *cstr = logfile.c_str();
     std::ifstream ifile(cstr);
     if (ifile) remove(cstr);
-    std::ofstream ofile(outfile, std::ofstream::out);
-    printf("Log file saved to %s\n", outfile.c_str()); fflush(stdout);
-    printf("##################################################\n");
+    std::ofstream ofile(logfile, std::ofstream::out);
+    printf("Log file saved to %s\n", logfile.c_str()); fflush(stdout);
 
     srand(time(NULL));
 
@@ -127,10 +129,11 @@ int main(int argc, char *argv[]) {
     float total_time;
 
     // assigning sensor source file
-    int fd = open("/sys/bus/i2c/drivers/ina3221x/1-0040/iio:device0/in_power0_input", O_RDONLY | O_NONBLOCK);
-    printf("Creating thread for power reading...");
-    std::thread power_thread(get_data_from_sensor, fd, outfile, 0);
+    // int fd = open("/sys/bus/i2c/drivers/ina3221x/1-0040/iio:device0/in_power0_input", O_RDONLY | O_NONBLOCK);
+    // printf("Creating thread for power reading...");
+    // std::thread power_thread(get_data_from_sensor, fd, outfile, 0);
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
+    printf("##################################################\n");
 
     for (int n = LOOP_START; n <= LOOP_NUM; n++) {
         printf("Looping number # %d\n", n);
@@ -324,7 +327,12 @@ int main(int argc, char *argv[]) {
     mtx.lock();
     gflag = 1;
     mtx.unlock();
-    power_thread.join();
+    // power_thread.join();
+
+    // std::ofstream out;
+    // out.open(outfile, std::ios::app);
+    // out << "time1: " << 0 << std::endl;
+    // out << "time2: " << total_time << std::endl;
 
     return 0;
 }
