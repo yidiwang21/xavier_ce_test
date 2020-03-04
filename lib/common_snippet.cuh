@@ -8,9 +8,10 @@
 #define MM_INIT_PARAM() \
     int M = 1024;   \
     int K = 1024;   \
-    int N = 2048;   \
+    int N = 1048576;   \
     const float alpha = 1.0;    \
     const float beta = 0.0; \
+    int lda = M, ldb = K, ldc = M;  \
 
 #define MM_CREATE_CUDA_STREAM() \
     printf("Creating cuda stream for mm..."); fflush(stdout);   \

@@ -23,18 +23,18 @@ std::mutex mtx;
 
 int main(int argc, char *argv[]) {
     // reserve 2 cpus for this process
-    cpu_set_t mask;
-    CPU_ZERO(&mask);
-    CPU_SET(0, &mask);
-    CPU_SET(1, &mask);
-    if (sched_setaffinity(0, sizeof(mask), &mask) != 0) {
-        printf("sched_setaffinity for the main process failed.\n");
-        exit(1);
-    }
+    // cpu_set_t mask;
+    // CPU_ZERO(&mask);
+    // CPU_SET(0, &mask);
+    // CPU_SET(1, &mask);
+    // if (sched_setaffinity(0, sizeof(mask), &mask) != 0) {
+    //     printf("sched_setaffinity for the main process failed.\n");
+    //     exit(1);
+    // }
 
     // main program starts
     std::string logfile;    // for log of time
-    // std::string outfile;    // for log of power
+    std::string outfile;    // for log of power
     int opt;
     enum computing_elem CE = GPU_REG_CORES;   // default computing element is GPU regular cores
     int sm = 4;
@@ -74,13 +74,13 @@ int main(int argc, char *argv[]) {
             printf("Computing element: GPU regular cores\n"); fflush(stdout);
             printf("Online SM: %d\n", sm);
             logfile = "log_gpu_reg_SM_" + std::to_string(sm) + ".txt";
-            // outfile = "power_gpu_reg_SM_" + std::to_string(sm) + ".txt";
+            outfile = "power_gpu_reg_SM_" + std::to_string(sm) + ".txt";
             break;
         case GPU_TENSOR_CORES:
             printf("Computing element: GPU tensor cores\n"); fflush(stdout);
             printf("Online SM: %d\n", sm);
             logfile = "log_gpu_tensor_SM_" + std::to_string(sm) + ".txt";
-            // outfile = "power_gpu_tensor_SM_" + std::to_string(sm) + ".txt";
+            outfile = "power_gpu_tensor_SM_" + std::to_string(sm) + ".txt";
             break;
         case TEST_OUTPUT:
             printf("Test output\n"); fflush(stdout);
@@ -129,9 +129,9 @@ int main(int argc, char *argv[]) {
     float total_time;
 
     // assigning sensor source file
-    // int fd = open("/sys/bus/i2c/drivers/ina3221x/1-0040/iio:device0/in_power0_input", O_RDONLY | O_NONBLOCK);
-    // printf("Creating thread for power reading...");
-    // std::thread power_thread(get_data_from_sensor, fd, outfile, 0);
+    int fd = open("/sys/bus/i2c/drivers/ina3221x/1-0040/iio:device0/in_power0_input", O_RDONLY | O_NONBLOCK);
+    printf("Creating thread for power reading...");
+    std::thread power_thread(get_data_from_sensor, fd, outfile, 0);
     stopTime(&timer); printf("%f s\n", elapsedTime(timer));
     printf("##################################################\n");
 
@@ -318,7 +318,9 @@ int main(int argc, char *argv[]) {
     cublasDestroy(handle);    
 
     // cudaDeviceReset();
-    stopTime(&timer); printf("Total time: %f s\n", elapsedTime(timer));
+    stopTime(&timer); 
+    total_time = elapsedTime(timer);
+    printf("Total time: %f s\n", total_time);
     
     cudaDeviceSynchronize();
     cudaProfilerStop();
@@ -327,12 +329,12 @@ int main(int argc, char *argv[]) {
     mtx.lock();
     gflag = 1;
     mtx.unlock();
-    // power_thread.join();
+    power_thread.join();
 
-    // std::ofstream out;
-    // out.open(outfile, std::ios::app);
-    // out << "time1: " << 0 << std::endl;
-    // out << "time2: " << total_time << std::endl;
+    std::ofstream out;
+    out.open(outfile, std::ios::app);
+    out << "time1: " << 0 << std::endl;
+    out << "time2: " << total_time << std::endl;
 
     return 0;
 }

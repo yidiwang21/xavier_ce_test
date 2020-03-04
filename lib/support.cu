@@ -84,7 +84,7 @@ extern int gflag;
 void get_data_from_sensor(int src_file, std::string dest_file, int freq_div) {
     cpu_set_t mask;
     CPU_ZERO(&mask);
-    CPU_SET(0, &mask);
+    // CPU_SET(0, &mask);
     CPU_SET(1, &mask);
     if (sched_setaffinity(0, sizeof(mask), &mask) != 0) {
         printf("sched_setaffinity for the power query thread failed.\n");
@@ -95,14 +95,15 @@ void get_data_from_sensor(int src_file, std::string dest_file, int freq_div) {
         fprintf(stderr, "Error opening file.");
         exit(1);
     }
-
     std::ofstream out;
     out.open(dest_file, std::ios::app);
     
+    char buf[10];
+    int n = 0;
     while (gflag == 0) {
-        char buf[31];
+        memset( buf, '\0', sizeof(char) * 10 );
         lseek(src_file, 0, 0);
-        int n = read(src_file, buf, 32);
+        n = read(src_file, buf, 10);
         out << "GPU " << buf;
     }
 }
