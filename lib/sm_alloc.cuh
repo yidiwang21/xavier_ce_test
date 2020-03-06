@@ -5,7 +5,8 @@
 
 #define SM_OCCUPATION
 
-#define SM_OCCUPIED_BLOCKSIZE 1    /* blocksize of the blocks that are used to occupy the certain  number of SMs */
+// TODO: used to be 1
+#define SM_OCCUPIED_BLOCKSIZE 32    /* blocksize of the blocks that are used to occupy the certain  number of SMs */
 #define SM_BLOCKS_PER   32
 #define SM_OCCUPIED_GRIDSIZE MAX_SM * SM_BLOCKS_PER
 
@@ -13,19 +14,18 @@
 
 extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_smids);
 
+extern __device__ inline uint64_t GlobalTimer64(void);
+extern __device__ inline long long seconds_to_gpu_cycles(int sec, int freq);
+
 #define _get_smid() ({  \
     uint ret;   \
     asm("mov.u32 %0, %smid;" : "=r"(ret) ); \
     ret; })
 
-#define _get_global_time() ({   \
-    uint64_t reading; \
-    asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(reading)); \
-    reading;    })
-
 #define SM_VARS_INIT()   \
     printf("    * initializing variables...\n");    \
     int device = -1;    \
+    int peak_clk = 1;   \
     int *stop_flag_h = new int;   \
     *stop_flag_h = 0;    \
     int *stop_flag_d;  \
@@ -35,7 +35,8 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
     int *block_smids_d; \
     cudaMalloc((void**)&block_smids_d, sizeof(int) * SM_OCCUPIED_GRIDSIZE); \
     cudaStream_t occupied_stream;   \
-    cudaStream_t backup_stream;
+    cudaStream_t backup_stream; \
+    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
 #define SM_MAPPING_INIT(...)    \
     printf("    * Initialize SM mapping...\n");   \
@@ -55,11 +56,13 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
     /* int *stop_flag; \
     cudaMallocManaged((void**)&stop_flag, sizeof(int)); \
     *stop_flag = 0; \ */\
+    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
 #define SM_CREATE_STREAM()  \
     printf("    * Creating stream for resident kernels...\n"); \
     cudaStreamCreateWithFlags(&occupied_stream, cudaStreamNonBlocking); \
-    cudaStreamCreateWithFlags(&backup_stream, cudaStreamNonBlocking);
+    cudaStreamCreateWithFlags(&backup_stream, cudaStreamNonBlocking);   \
+    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
 #define SM_COPY_MAPPING()   \
     printf("    * Copying SM mapping to device...\n"); \
@@ -67,13 +70,15 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
     cudaMemcpyAsync(block_smids_d, block_smids_h, sizeof(int) * SM_OCCUPIED_GRIDSIZE, cudaMemcpyHostToDevice, occupied_stream); \
     cudaGetDevice(&device); \
     /* cudaMemPrefetchAsync(stop_flag, sizeof(int), device, backup_stream); */\
-    cudaMemcpyAsync(stop_flag_d, stop_flag_h, sizeof(int), cudaMemcpyHostToDevice, backup_stream);
+    cudaMemcpyAsync(stop_flag_d, stop_flag_h, sizeof(int), cudaMemcpyHostToDevice, backup_stream);  \
+    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
 #define SM_KERNEL_LAUNCH() \
     SM_CREATE_STREAM(); \
     SM_COPY_MAPPING(); \
     printf("    * Launching resident_kernel...\n"); \
-    resident_kernel <<< SM_OCCUPIED_GRIDSIZE, SM_OCCUPIED_BLOCKSIZE, 0, occupied_stream >>> (mapping_d, stop_flag_d, block_smids_d);
+    resident_kernel <<< SM_OCCUPIED_GRIDSIZE, SM_OCCUPIED_BLOCKSIZE, 0, occupied_stream >>> (mapping_d, stop_flag_d, block_smids_d);    \
+    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
 
 #define SM_STOP_KERNEL_RESIDENTS() \
     printf("    * Stopping kernel residents...\n"); \
@@ -81,15 +86,41 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
     cudaMemPrefetchAsync(stop_flag, sizeof(int), device, backup_stream); \ */\
     *stop_flag_h = 1; \
     cudaMemcpyAsync(stop_flag_d, stop_flag_h, sizeof(int), cudaMemcpyHostToDevice, backup_stream);  \
-    printf("    * Copying smids from device to host...\n"); \
+    printf("    * Copying smids from device to host..."); \
     cudaMemcpyAsync(block_smids_h, block_smids_d, sizeof(int) * SM_OCCUPIED_GRIDSIZE, cudaMemcpyDeviceToHost, occupied_stream); \
     /* for (int i = 0; i < SM_OCCUPIED_GRIDSIZE; i++) { \
         printf("block smid: %d\n", block_smids_h[i]); \
-    }   \ */
-    
+    }   \ */\
+    stopTime(&timer); printf("%f s\n", elapsedTime(timer));
+
+
+// to add some workload to the permanent kernels to check SM power consumption
+#define EXTRA_BEFORE_LOOP() \
+    float r1, r2, r3;   \
+    unsigned int seed = threadIdx.x;    \
+    curandState_t curand_state; \
+    curand_init(seed, 0, 0, &curand_state);    \
+    r1 = curand_uniform(&curand_state); \
+    r2 = curand_uniform(&curand_state); \
+    r3 = curand_uniform(&curand_state);
+
+#define EXTRA_WORKLOADS_1()  \
+    int temp = 0;   \
+    temp = threadIdx.x + blockIdx.x * blockDim.x;   \
+    temp %= _get_smid();    \
+
+#define EXTRA_WORKLOADS_2() \
+    r3 = r1 + r2 ;  \
+    r2 = r3 + r1 ;  \
+    r1 = r2 + r3 ;  \
+    r3 = r1 + r2 ;  \
+    r2 = r3 + r1 ;  \
+    r1 = r2 + r3 ;
+
 
 #define KERNEL_PROLOGUE() \
-    uint64_t start_time = _get_global_time();   \
+    uint64_t start_time = GlobalTimer64();   \
+    long long start_clock = clock64();  \
     int smid = _get_smid(); \
     __syncthreads(); \
     if (mapping[smid + 1] == 0) {   \
@@ -102,9 +133,10 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
         block_smids[blockIdx.x] = _get_smid();  \
     }   \
     __syncthreads();    \
-    while (_get_global_time() - start_time < 1000 * 1000 * 1000) {    \
-        if (*stop_flag == 1)    \
-            break; \
+    EXTRA_BEFORE_LOOP();    \
+    while (clock64() < start_clock + seconds_to_gpu_cycles(10, 675750000)) {    \
+        /* if (*stop_flag == 1) return; \ */\
+        EXTRA_WORKLOADS_2(); \
         continue; \
     }   \
     return; \
@@ -113,3 +145,6 @@ extern __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_
 
 
 #endif /* __SM_ALLOC__ */
+
+
+// _get_global_time() - start_time < 1000 * 1000 * 1000 * 100

@@ -53,12 +53,12 @@ __global__ void resident_kernel(int *mapping, int *stop_flag, int *block_smids) 
 
 __global__ void dummy_kernel() {
     uint64_t spin_duration = 1000 * 1000 * 1000;
-    uint64_t start_time = _get_global_time();
+    uint64_t start_time = GlobalTimer64();
     // if (threadIdx.x == 0) {
     //     block_times[blockIdx.x * 2] = start_time;
     // }
     __syncthreads();
-    while ((_get_global_time() - start_time) < spin_duration) {
+    while ((GlobalTimer64() - start_time) < spin_duration) {
         continue;
     }
     // if (threadIdx.x == 0) {
@@ -66,6 +66,19 @@ __global__ void dummy_kernel() {
     // }
     return;
 }
+
+__device__ inline uint64_t GlobalTimer64(void) {
+    volatile uint64_t reading;
+    asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(reading));
+    return reading;
+}
+
+// seconds to gpu cycles
+// freq: Hz
+__device__ inline long long seconds_to_gpu_cycles(int sec, int freq) {
+    return (long long)sec * (long long)freq;
+}
+
 
 // void *use_sm_residents(void *vargp) {
 //     sigset_t set;

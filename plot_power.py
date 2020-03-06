@@ -4,6 +4,9 @@ import os
 import matplotlib.pyplot as plt
 import math
 
+def most_common(lst):
+    return max(set(lst), key=lst.count)
+
 def closest(lst, K): 
     lst = np.asarray(lst) 
     idx = (np.abs(lst - K)).argmin() 
@@ -52,15 +55,11 @@ for t in end_time:
 # end_time: exe end time
 # stop_time: stop logging time (after cooling down)
 
+print("Const power consumption: ", most_common(curr_power_list))
 
-
-
-fig, axs = plt.subplots(2, sharex=True)
-axs[0].plot(time_list, curr_power_list)
-axs[0].set_title('Power')
-axs[0].set_ylabel("Power Consumption (mWatt)")
-axs[0].grid(color='k', linestyle=':', linewidth=1)
-
-
-fig.suptitle(filename)
+plt.figure(1)
+plt.plot(time_list, curr_power_list)
+plt.title('Power')
+plt.ylabel("Power Consumption (mWatt)")
+plt.grid(color='k', linestyle=':', linewidth=1)
 plt.show()
